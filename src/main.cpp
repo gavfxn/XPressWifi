@@ -9,6 +9,39 @@
 
 using namespace std;
 
+
+#define STX 0xAA
+#define ETX 0x55
+#define MAX_ID_BYTES 16
+
+// Adjust these to pins that are actually free on your specific board -
+// GPIO16/17 are the Serial2 defaults on most ESP32 dev boards, but
+// are used internally for PSRAM on WROVER modules. Check your board.
+#define TWN4_RX_PIN 4
+#define TWN4_TX_PIN 5
+#define TWN4_BAUD   19200
+
+
+enum ParseState {
+  WAIT_STX,
+  READ_TAGTYPE,
+  READ_BITCOUNT_LO,
+  READ_BITCOUNT_HI,
+  READ_BYTECOUNT,
+  READ_ID,
+  READ_CHECKSUM,
+  READ_ETX
+};
+
+ParseState state = WAIT_STX;
+uint8_t  tagType;
+uint16_t idBitCount;
+uint8_t  idByteCount;
+uint8_t  idBytes[MAX_ID_BYTES];
+uint8_t  idIndex;
+uint8_t  runningChecksum;
+
+
 GxEPD2_3C<GxEPD2_213_Z98c, GxEPD2_213_Z98c::HEIGHT> display(
   GxEPD2_213_Z98c(10, 9, 8, 7) // CS, DC, RST, BUSY
 );
@@ -159,7 +192,20 @@ void printDb() {
 //----------------------------------------------------------------------------------------------------
 
 
+void printFrame() {
+  Serial.print("TagType=");
+  Serial.print(tagType);
+  Serial.print("  IDBitCount=");
+  Serial.print(idBitCount);
+  Serial.print("  ID=");
+  for (int i = 0; i < idByteCount; i++) {
+    if (idBytes[i] < 0x10) Serial.print("0");
+    Serial.print(idBytes[i], HEX);
+  }
+  Serial.println();
+}
 
+//----------------------------------------------------------------------------------------------------
 
 
 
@@ -168,8 +214,9 @@ WiFiManager wifiManager;
 void setup() {
 
 
-  Serial.begin(115200);
-  Serial.println("Starting...");
+  Serial.begin(115200);  // USB, for debug output - open Serial Monitor at 115200
+  Serial2.begin(TWN4_BAUD, SERIAL_8N1, TWN4_RX_PIN, TWN4_TX_PIN);
+  Serial.println("Waiting for TWN4...");
 
 
   SPIFFS.begin(true); // For SPIFFS
@@ -251,5 +298,72 @@ void loop() {
 
   IPhandling();
 
+
+
+  while (Serial2.available()) {
+    uint8_t b = Serial2.read();
+
+    Serial.println(b);
+
+    switch (state) {
+      case WAIT_STX:
+        if (b == STX) {
+          runningChecksum = 0;
+          state = READ_TAGTYPE;
+        }
+        break;
+
+      case READ_TAGTYPE:
+        tagType = b;
+        runningChecksum ^= b;
+        state = READ_BITCOUNT_LO;
+        break;
+
+      case READ_BITCOUNT_LO:
+        idBitCount = b;
+        runningChecksum ^= b;
+        state = READ_BITCOUNT_HI;
+        break;
+
+      case READ_BITCOUNT_HI:
+        idBitCount |= ((uint16_t)b << 8);
+        runningChecksum ^= b;
+        state = READ_BYTECOUNT;
+        break;
+
+      case READ_BYTECOUNT:
+        idByteCount = b;
+        runningChecksum ^= b;
+        idIndex = 0;
+        state = (idByteCount > 0 && idByteCount <= MAX_ID_BYTES) ? READ_ID : WAIT_STX;
+        break;
+
+      case READ_ID:
+        idBytes[idIndex++] = b;
+        runningChecksum ^= b;
+        if (idIndex >= idByteCount) {
+          state = READ_CHECKSUM;
+        }
+        break;
+
+      case READ_CHECKSUM:
+        if (b == runningChecksum) {
+          state = READ_ETX;
+        } else {
+          Serial.println("Checksum mismatch, dropping frame");
+          state = WAIT_STX;
+        }
+        break;
+
+      case READ_ETX:
+        if (b == ETX) {
+          printFrame();
+        } else {
+          Serial.println("Missing ETX, dropping frame");
+        }
+        state = WAIT_STX;
+        break;
+    }
+  }
 
 }
