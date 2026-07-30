@@ -21,6 +21,8 @@ using namespace std;
 #define TWN4_TX_PIN 5
 #define TWN4_BAUD   19200
 
+#define MAX_BUFFER 128
+
 
 enum ParseState {
   WAIT_STX,
@@ -189,6 +191,16 @@ void printDb() {
   }
 }
 
+String isAllowedArr[2];
+int isAllowedCallback(void *data, int argc, char **argv, char **colNames) {
+  Serial.print(argv[1]);
+  Serial.print(argv[2]);
+  isAllowedArr[0] = argv[1] ? argv[1] : "NULL"; // name
+  isAllowedArr[1] = argv[2] ? argv[2] : "NULL"; // cardID
+
+  return 0; // always continue normally
+}
+
 //----------------------------------------------------------------------------------------------------
 
 
@@ -207,22 +219,51 @@ void printFrame() {
 
 //----------------------------------------------------------------------------------------------------
 
+void isAllowed(String cardID) {
+  sqlite3_exec(db, ("SELECT * FROM persons WHERE cardID = '" + cardID + "';").c_str(), isAllowedCallback, NULL, &errMsg);
+
+  String test = "dominic";
+  updateDisplay(isAllowedArr[0].c_str());
+
+
+  
+}
+
 vector<uint8_t> buffer;
+String IDString = "";
 void handleBytes(){
   while (Serial2.available()) {
     uint8_t b = Serial2.read();
     buffer.push_back(b);
+    Serial.print(b);
 
-    //Serial.println(b);
+    // process every complete line currently in the buffer
+    while (true) {
+      auto it = std::find(buffer.begin(), buffer.end(), '\n');
+      if (it == buffer.end()) break;  // no complete line yet
 
-    
+      size_t lineLen = std::distance(buffer.begin(), it) + 1; // include the \n
+      String line;
+      line.reserve(lineLen);
+      for (size_t i = 0; i < lineLen; i++) line += (char)buffer[i];
+      line.trim();  // strips \r\n
+
+      if (line.length() > 0) {
+        Serial.println(line);
+        // handle/parse `line` here
+        isAllowed(line);
+      }
+
+      buffer.erase(buffer.begin(), buffer.begin() + lineLen); // consume just this line
+    }
+
+    // safety: if buffer grows too large with no terminator, drop it (noise/garbage)
+    if (buffer.size() > MAX_BUFFER) {
+      buffer.clear();
+    }
   }
-  for (int i = 0; i < buffer.size(); i++) {
-    Serial.print(buffer[i]);
-  }
-  //Serial.println();
-  buffer.clear();
 }
+
 
 
 
@@ -268,37 +309,40 @@ void setup() {
   }
 
 
+  sqlite3_exec(db, "DROP TABLE IF EXISTS persons;", NULL, NULL, &errMsg);
+
   //sqlite3_exec(db, "DELETE FROM my_table;", NULL, NULL, &errMsg);
-  rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS persons (id INTEGER, name TEXT);", NULL, NULL, &errMsg);
+  rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS persons (id INTEGER, name TEXT, cardID TEXT);", NULL, NULL, &errMsg);
   if (rc != SQLITE_OK) {
     Serial.printf("CREATE TABLE error: %s\n", errMsg);
     sqlite3_free(errMsg);
   }
 
   sqlite3_exec(db, "DELETE FROM persons;", NULL, NULL, &errMsg);
+  
 
   
-  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (1, 'GT', 676);", NULL, NULL, &errMsg);
+  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (1, 'Dominic', '0x38042969E2EE7A8');", NULL, NULL, &errMsg);
   if (rc != SQLITE_OK) {
     Serial.printf("CREATE TABLE error: %s\n", errMsg);
     sqlite3_free(errMsg);
   }
-  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (2, 'Franco', 222);", NULL, NULL, &errMsg);
+  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (2, 'Franco', '0x40D29D0C19FEFF12E0');", NULL, NULL, &errMsg);
   if (rc != SQLITE_OK) {
     Serial.printf("CREATE TABLE error: %s\n", errMsg);
     sqlite3_free(errMsg);
   }
-  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (3, 'Ikem', 555);", NULL, NULL, &errMsg);
+  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (3, 'Ikem', '555');", NULL, NULL, &errMsg);
   if (rc != SQLITE_OK) {
     Serial.printf("CREATE TABLE error: %s\n", errMsg);
     sqlite3_free(errMsg);
   }
-  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (4, 'Raghav', 777);", NULL, NULL, &errMsg);
+  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (4, 'Raghav', '777');", NULL, NULL, &errMsg);
   if (rc != SQLITE_OK) {
     Serial.printf("CREATE TABLE error: %s\n", errMsg);
     sqlite3_free(errMsg);
   }
-  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (5, 'Dominic', 888);", NULL, NULL, &errMsg);
+  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (5, 'Dominic', '888');", NULL, NULL, &errMsg);
   if (rc != SQLITE_OK) {
     Serial.printf("CREATE TABLE error: %s\n", errMsg);
     sqlite3_free(errMsg);
@@ -315,7 +359,7 @@ char str[MAX_STR_LEN];
 
 void loop() {
 
-  IPhandling();
+  //IPhandling();
 
 
   
