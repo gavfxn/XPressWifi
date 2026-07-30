@@ -207,6 +207,23 @@ void printFrame() {
 
 //----------------------------------------------------------------------------------------------------
 
+vector<uint8_t> buffer;
+void handleBytes(){
+  while (Serial2.available()) {
+    uint8_t b = Serial2.read();
+    buffer.push_back(b);
+
+    //Serial.println(b);
+
+    
+  }
+  for (int i = 0; i < buffer.size(); i++) {
+    Serial.print(buffer[i]);
+  }
+  //Serial.println();
+  buffer.clear();
+}
+
 
 
 WiFiManager wifiManager;
@@ -294,76 +311,14 @@ void setup() {
 }
 
 char str[MAX_STR_LEN];
+
+
 void loop() {
 
   IPhandling();
 
 
-
-  while (Serial2.available()) {
-    uint8_t b = Serial2.read();
-
-    Serial.println(b);
-
-    switch (state) {
-      case WAIT_STX:
-        if (b == STX) {
-          runningChecksum = 0;
-          state = READ_TAGTYPE;
-        }
-        break;
-
-      case READ_TAGTYPE:
-        tagType = b;
-        runningChecksum ^= b;
-        state = READ_BITCOUNT_LO;
-        break;
-
-      case READ_BITCOUNT_LO:
-        idBitCount = b;
-        runningChecksum ^= b;
-        state = READ_BITCOUNT_HI;
-        break;
-
-      case READ_BITCOUNT_HI:
-        idBitCount |= ((uint16_t)b << 8);
-        runningChecksum ^= b;
-        state = READ_BYTECOUNT;
-        break;
-
-      case READ_BYTECOUNT:
-        idByteCount = b;
-        runningChecksum ^= b;
-        idIndex = 0;
-        state = (idByteCount > 0 && idByteCount <= MAX_ID_BYTES) ? READ_ID : WAIT_STX;
-        break;
-
-      case READ_ID:
-        idBytes[idIndex++] = b;
-        runningChecksum ^= b;
-        if (idIndex >= idByteCount) {
-          state = READ_CHECKSUM;
-        }
-        break;
-
-      case READ_CHECKSUM:
-        if (b == runningChecksum) {
-          state = READ_ETX;
-        } else {
-          Serial.println("Checksum mismatch, dropping frame");
-          state = WAIT_STX;
-        }
-        break;
-
-      case READ_ETX:
-        if (b == ETX) {
-          printFrame();
-        } else {
-          Serial.println("Missing ETX, dropping frame");
-        }
-        state = WAIT_STX;
-        break;
-    }
-  }
+  
+  handleBytes();
 
 }
