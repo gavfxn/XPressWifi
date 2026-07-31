@@ -193,6 +193,8 @@ void printDb() {
 
 String isAllowedArr[2];
 int isAllowedCallback(void *data, int argc, char **argv, char **colNames) {
+  
+
   Serial.print(argv[1]);
   Serial.print(argv[2]);
   isAllowedArr[0] = argv[1] ? argv[1] : "NULL"; // name
@@ -220,10 +222,18 @@ void printFrame() {
 //----------------------------------------------------------------------------------------------------
 
 void isAllowed(String cardID) {
-  sqlite3_exec(db, ("SELECT * FROM persons WHERE cardID = '" + cardID + "';").c_str(), isAllowedCallback, NULL, &errMsg);
-
+  rc = sqlite3_exec(db, ("SELECT * FROM persons WHERE cardID = '" + cardID + "';").c_str(), isAllowedCallback, NULL, &errMsg);
+  Serial.println(isAllowedArr[0]);
+  if (rc == 0){
+    String returnMsg = "Card Not Found";
+    updateDisplay(returnMsg.c_str());
+    return;
+    //TODO: Edit Update Display function to handle String
+  }
   String test = "dominic";
   updateDisplay(isAllowedArr[0].c_str());
+
+  rc = 0;
 
 
   
@@ -235,10 +245,10 @@ void handleBytes(){
   while (Serial2.available()) {
     uint8_t b = Serial2.read();
     buffer.push_back(b);
-    Serial.print(b);
-
+    //Serial.print("gurt: yo");
     // process every complete line currently in the buffer
     while (true) {
+      //Serial.print("yogurt");
       auto it = std::find(buffer.begin(), buffer.end(), '\n');
       if (it == buffer.end()) break;  // no complete line yet
 
