@@ -102,7 +102,8 @@ void ePaperSetup(){
   display.hibernate();
 }
 
-void updateDisplay(const char* text) {
+void updateDisplay(String text) {
+  const char* printValue = text.c_str();
   display.init(115200, false); // false = don't re-run full reset, just wake it
   display.setFullWindow();
   display.firstPage();
@@ -132,8 +133,8 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 
 void IPhandling(){
   if (WiFi.localIP().toString() != currentIP) {
-    //updateDisplay("IP Address: ".toString().c_str());
-    updateDisplay(WiFi.localIP().toString().c_str());
+    //updateDisplay("IP Address: ".toString());
+    updateDisplay(WiFi.localIP().toString());
     currentIP = WiFi.localIP().toString();
   }
 }
@@ -225,13 +226,12 @@ void isAllowed(String cardID) {
   rc = sqlite3_exec(db, ("SELECT * FROM persons WHERE cardID = '" + cardID + "';").c_str(), isAllowedCallback, NULL, &errMsg);
   Serial.println(isAllowedArr[0]);
   if (rc == 0){
-    String returnMsg = "Card Not Found";
-    updateDisplay(returnMsg.c_str());
+    updateDisplay("card Not Found");
     return;
     //TODO: Edit Update Display function to handle String
   }
   String test = "dominic";
-  updateDisplay(isAllowedArr[0].c_str());
+  updateDisplay(isAllowedArr[0]);
 
   rc = 0;
 
