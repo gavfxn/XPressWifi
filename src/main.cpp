@@ -23,6 +23,8 @@ using namespace std;
 
 #define MAX_BUFFER 128
 
+#define DEBUG 1
+
 
 enum ParseState {
   WAIT_STX,
@@ -34,6 +36,40 @@ enum ParseState {
   READ_CHECKSUM,
   READ_ETX
 };
+
+// 'pixil-frame-0(1)', 50x50px
+const unsigned char epd_bitmap_telaeris_sprite [] PROGMEM = {
+	0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x03, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x9c, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x1f, 0x8e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3f, 0x87, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x7f, 0x83, 0x80, 0x00, 0x00, 0x00, 0x00, 0xff, 0x81, 0xc0, 0x00, 0x00, 0x00, 
+	0x01, 0xff, 0x80, 0xe0, 0x00, 0x00, 0x00, 0x03, 0xff, 0x88, 0x70, 0x00, 0x00, 0x00, 0x07, 0xff, 
+	0x8c, 0x38, 0x00, 0x00, 0x00, 0x0f, 0xff, 0x8e, 0x1c, 0x00, 0x00, 0x00, 0x1f, 0xff, 0x87, 0x0e, 
+	0x00, 0x00, 0x00, 0x3f, 0xff, 0x83, 0x87, 0x00, 0x00, 0x00, 0x7f, 0xff, 0x81, 0xc3, 0x80, 0x00, 
+	0x00, 0xff, 0xff, 0x80, 0xe1, 0xc0, 0x00, 0x01, 0xff, 0xff, 0x80, 0x70, 0xe0, 0x00, 0x03, 0xff, 
+	0xff, 0x88, 0x38, 0x70, 0x00, 0x07, 0xff, 0xff, 0x8c, 0x1c, 0x38, 0x00, 0x0f, 0xff, 0xff, 0x8e, 
+	0x0e, 0x1c, 0x00, 0x1f, 0xff, 0xff, 0x8f, 0x07, 0x0e, 0x00, 0x3f, 0xff, 0xff, 0x8f, 0x83, 0x87, 
+	0x00, 0x7f, 0xff, 0xff, 0x8f, 0xc1, 0xc3, 0x80, 0xff, 0xff, 0xff, 0x8f, 0xe0, 0xe1, 0xc0, 0xff, 
+	0xff, 0xff, 0x8f, 0xe0, 0xe1, 0xc0, 0x7f, 0xff, 0xff, 0x8f, 0xc1, 0xc3, 0x80, 0x3f, 0xff, 0xff, 
+	0x8f, 0x83, 0x87, 0x00, 0x1f, 0xff, 0xff, 0x8f, 0x07, 0x0e, 0x00, 0x0f, 0xff, 0xff, 0x8e, 0x0e, 
+	0x1c, 0x00, 0x07, 0xff, 0xff, 0x8c, 0x1c, 0x38, 0x00, 0x03, 0xff, 0xff, 0x88, 0x38, 0x70, 0x00, 
+	0x01, 0xff, 0xff, 0x80, 0x70, 0xe0, 0x00, 0x00, 0xff, 0xff, 0x80, 0xe1, 0xc0, 0x00, 0x00, 0x7f, 
+	0xff, 0x81, 0xc3, 0x80, 0x00, 0x00, 0x3f, 0xff, 0x83, 0x87, 0x00, 0x00, 0x00, 0x1f, 0xff, 0x87, 
+	0x0e, 0x00, 0x00, 0x00, 0x0f, 0xff, 0x8e, 0x1c, 0x00, 0x00, 0x00, 0x07, 0xff, 0x8c, 0x38, 0x00, 
+	0x00, 0x00, 0x03, 0xff, 0x88, 0x70, 0x00, 0x00, 0x00, 0x01, 0xff, 0x80, 0xe0, 0x00, 0x00, 0x00, 
+	0x00, 0xff, 0x81, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x7f, 0x83, 0x80, 0x00, 0x00, 0x00, 0x00, 0x3f, 
+	0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1f, 0x8e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x9c, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x07, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xf0, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x01, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00
+};
+
+#define spriteWidth 50
+#define spriteHeight 50
+
+int spritePosX;
+int spritePosY;
+
+
 
 ParseState state = WAIT_STX;
 uint8_t  tagType;
@@ -88,30 +124,40 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventTyp
 void ePaperSetup(){
   display.init(115200, true, 2, false); // Waveshare reset circuit timing
 
-  display.setRotation(1);
+  display.setRotation(2);
   display.setFont(&FreeMonoBold9pt7b);
   display.setFullWindow();
   display.firstPage();
   do {
-    display.fillScreen(GxEPD_WHITE);
+    display.fillScreen(GxEPD_BLACK);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(10, 30);
     display.print("Ready to display!");
   } while (display.nextPage());
 
+spritePosX = (display.width() - spriteWidth) / 2;
+spritePosY = (display.height() - spriteHeight) / 2;
+
   display.hibernate();
 }
 
-void updateDisplay(String text) {
+void updateDisplay(String text, String color) {
+  
   const char* printValue = text.c_str();
   display.init(115200, false); // false = don't re-run full reset, just wake it
   display.setFullWindow();
   display.firstPage();
   do {
-    display.fillScreen(GxEPD_WHITE);
-    display.setTextColor(GxEPD_BLACK);
+    if (color.equals("black")){
+      display.fillScreen(GxEPD_BLACK);
+
+    }if (color.equals("red")){
+      display.fillScreen(GxEPD_RED);
+    }
+    display.setTextColor(GxEPD_WHITE);
     display.setCursor(10, 30);
     display.print(text);
+    display.drawBitmap(spritePosX, spritePosY, epd_bitmap_telaeris_sprite, spriteWidth, spriteHeight, GxEPD_WHITE);
   } while (display.nextPage());
 
   display.hibernate(); // put it back to sleep until next update
@@ -122,9 +168,11 @@ void updateDisplay(String text) {
 
 
 void configModeCallback (WiFiManager *myWiFiManager) {
-  Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
-  Serial.printf("WiFi mode: %d\n", WiFi.getMode());
-  Serial.printf("Station count: %d\n", WiFi.softAPgetStationNum());
+  #if DEBUG
+    Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
+    Serial.printf("WiFi mode: %d\n", WiFi.getMode());
+    Serial.printf("Station count: %d\n", WiFi.softAPgetStationNum());
+  #endif
 }
 
 
@@ -134,7 +182,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 void IPhandling(){
   if (WiFi.localIP().toString() != currentIP) {
     //updateDisplay("IP Address: ".toString());
-    updateDisplay(WiFi.localIP().toString());
+    updateDisplay(WiFi.localIP().toString(), "black");
     currentIP = WiFi.localIP().toString();
   }
 }
@@ -147,7 +195,9 @@ void IPhandling(){
 
 int myCallback(void *data, int argc, char **argv, char **colNames) {
   for (int i = 0; i < argc; i++) {
-    Serial.printf("%s = %s\n", colNames[i], argv[i] ? argv[i] : "NULL");
+    #if DEBUG
+      Serial.printf("%s = %s\n", colNames[i], argv[i] ? argv[i] : "NULL");
+    #endif
   }
   return 0;
 }
@@ -183,23 +233,36 @@ void printDb() {
   
   for (int i = 0; i < dbArr.size(); i++) {
     for (int j = 0; j < dbArr[i].size(); j++) {
-      Serial.print(dbArr[i][j]);
+      #if DEBUG
+        Serial.print(dbArr[i][j]);
+      #endif
       if (j < dbArr[i].size() - 1) {
-        Serial.print(", ");
+        #if DEBUG
+          Serial.print(", ");
+        #endif
       }
     }
-    Serial.println();
+    #if DEBUG
+      Serial.println();
+    #endif
   }
 }
 
-String isAllowedArr[2];
+String isAllowedArr[2] = {"Not Found", "Not Found"};
 int isAllowedCallback(void *data, int argc, char **argv, char **colNames) {
   
-
-  Serial.print(argv[1]);
-  Serial.print(argv[2]);
+  #if DEBUG
+    Serial.print(argv[1]);
+    Serial.print(argv[2]);
+  #endif
   isAllowedArr[0] = argv[1] ? argv[1] : "NULL"; // name
   isAllowedArr[1] = argv[2] ? argv[2] : "NULL"; // cardID
+
+  #if DEBUG
+    Serial.println(isAllowedArr[0]);
+    Serial.println(isAllowedArr[1]);
+  #endif
+
 
   return 0; // always continue normally
 }
@@ -214,7 +277,7 @@ void printFrame() {
   Serial.print(idBitCount);
   Serial.print("  ID=");
   for (int i = 0; i < idByteCount; i++) {
-    if (idBytes[i] < 0x10) Serial.print("0");
+    //if (idBytes[i] < 0x10) Serial.print("0");
     Serial.print(idBytes[i], HEX);
   }
   Serial.println();
@@ -223,15 +286,20 @@ void printFrame() {
 //----------------------------------------------------------------------------------------------------
 
 void isAllowed(String cardID) {
-  rc = sqlite3_exec(db, ("SELECT * FROM persons WHERE cardID = '" + cardID + "';").c_str(), isAllowedCallback, NULL, &errMsg);
-  Serial.println(isAllowedArr[0]);
-  if (rc == 0){
-    updateDisplay("card Not Found");
+  rc = sqlite3_exec(db, ("SELECT * FROM persons WHERE cardID = '" + cardID + "';").c_str(), isAllowedCallback, isAllowedArr, &errMsg);
+
+
+  if (isAllowedArr[0].equals("Not Found")){
+    updateDisplay("Card Not Found", "red");
     return;
     //TODO: Edit Update Display function to handle String
   }
   String test = "dominic";
-  updateDisplay(isAllowedArr[0]);
+  updateDisplay(isAllowedArr[0], "black");
+  isAllowedArr[0] = "Not Found";
+  isAllowedArr[1] = "Not Found";
+
+
 
   rc = 0;
 
@@ -242,13 +310,15 @@ void isAllowed(String cardID) {
 vector<uint8_t> buffer;
 String IDString = "";
 void handleBytes(){
+  Serial.print("test");
   while (Serial2.available()) {
     uint8_t b = Serial2.read();
+    Serial.print(b, HEX);
     buffer.push_back(b);
-    //Serial.print("gurt: yo");
+  
     // process every complete line currently in the buffer
     while (true) {
-      //Serial.print("yogurt");
+    
       auto it = std::find(buffer.begin(), buffer.end(), '\n');
       if (it == buffer.end()) break;  // no complete line yet
 
@@ -259,8 +329,10 @@ void handleBytes(){
       line.trim();  // strips \r\n
 
       if (line.length() > 0) {
-        Serial.println(line);
+       
         // handle/parse `line` here
+        Serial.println(line);  // echo back to the serial port
+        display.println(line);
         isAllowed(line);
       }
 
@@ -284,7 +356,7 @@ void setup() {
 
   Serial.begin(115200);  // USB, for debug output - open Serial Monitor at 115200
   Serial2.begin(TWN4_BAUD, SERIAL_8N1, TWN4_RX_PIN, TWN4_TX_PIN);
-  Serial.println("Waiting for TWN4...");
+  
 
 
   SPIFFS.begin(true); // For SPIFFS
@@ -312,56 +384,75 @@ void setup() {
 
 
   rc = sqlite3_open("/spiffs/myData.db", &db);
-  if (rc != SQLITE_OK) {
-    Serial.printf("Can't open database: %s\n", sqlite3_errmsg(db));
-  } else {
-    Serial.println("Database opened successfully");
-  }
+  #if DEBUG
+    if (rc != SQLITE_OK) {
+      Serial.printf("Can't open database: %s\n", sqlite3_errmsg(db));
+    } else {
+      Serial.println("Database opened successfully");
+    }
+  #endif
 
 
   sqlite3_exec(db, "DROP TABLE IF EXISTS persons;", NULL, NULL, &errMsg);
 
   //sqlite3_exec(db, "DELETE FROM my_table;", NULL, NULL, &errMsg);
   rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS persons (id INTEGER, name TEXT, cardID TEXT);", NULL, NULL, &errMsg);
-  if (rc != SQLITE_OK) {
-    Serial.printf("CREATE TABLE error: %s\n", errMsg);
-    sqlite3_free(errMsg);
-  }
+  #if DEBUG
+    if (rc != SQLITE_OK) {
+      Serial.printf("CREATE TABLE error: %s\n", errMsg);
+      sqlite3_free(errMsg);
+    }
+  #endif
 
   sqlite3_exec(db, "DELETE FROM persons;", NULL, NULL, &errMsg);
   
 
   
-  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (1, 'Dominic', '0x38042969E2EE7A8');", NULL, NULL, &errMsg);
-  if (rc != SQLITE_OK) {
-    Serial.printf("CREATE TABLE error: %s\n", errMsg);
-    sqlite3_free(errMsg);
-  }
+  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (1, 'Dominic', '0x38042969E2EE7A80');", NULL, NULL, &errMsg);
+  #if DEBUG
+    if (rc != SQLITE_OK) {
+      Serial.printf("CREATE TABLE error: %s\n", errMsg);
+      sqlite3_free(errMsg);
+    }
+  #endif
   rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (2, 'Franco', '0x40D29D0C19FEFF12E0');", NULL, NULL, &errMsg);
-  if (rc != SQLITE_OK) {
-    Serial.printf("CREATE TABLE error: %s\n", errMsg);
-    sqlite3_free(errMsg);
-  }
-  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (3, 'Ikem', '555');", NULL, NULL, &errMsg);
-  if (rc != SQLITE_OK) {
-    Serial.printf("CREATE TABLE error: %s\n", errMsg);
-    sqlite3_free(errMsg);
-  }
+  #if DEBUG
+    if (rc != SQLITE_OK) {
+      Serial.printf("CREATE TABLE error: %s\n", errMsg);
+      sqlite3_free(errMsg);
+    }
+  #endif
+  rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (3, 'Andrew', '0x38048A5352FB7680');", NULL, NULL, &errMsg);
+  #if DEBUG
+    if (rc != SQLITE_OK) {
+      Serial.printf("CREATE TABLE error: %s\n", errMsg);
+      sqlite3_free(errMsg);
+    }
+  #endif
   rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (4, 'Raghav', '777');", NULL, NULL, &errMsg);
-  if (rc != SQLITE_OK) {
-    Serial.printf("CREATE TABLE error: %s\n", errMsg);
-    sqlite3_free(errMsg);
-  }
+  #if DEBUG
+    if (rc != SQLITE_OK) {
+      Serial.printf("CREATE TABLE error: %s\n", errMsg);
+      sqlite3_free(errMsg);
+    }
+  #endif
   rc = sqlite3_exec(db, "INSERT INTO persons (id, name, cardID) VALUES (5, 'Dominic', '888');", NULL, NULL, &errMsg);
-  if (rc != SQLITE_OK) {
-    Serial.printf("CREATE TABLE error: %s\n", errMsg);
-    sqlite3_free(errMsg);
-  }
+  #if DEBUG
+    if (rc != SQLITE_OK) {
+      Serial.printf("CREATE TABLE error: %s\n", errMsg);
+      sqlite3_free(errMsg);
+    }
+  #endif
 
  
 
   dbToArr();
   printDb();
+
+  display.setTextColor(GxEPD_WHITE);
+  updateDisplay("Ready to Display!", "black");
+
+  Serial.println("Ready to Display!");
 }
 
 char str[MAX_STR_LEN];
