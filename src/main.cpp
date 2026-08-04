@@ -6,6 +6,7 @@
 #include <ESPAsyncWebServer.h>
 #include <vector>
 #include <iomanip>
+#include <sstream>
 
 using namespace std;
 
@@ -69,6 +70,9 @@ const unsigned char epd_bitmap_telaeris_sprite [] PROGMEM = {
 int spritePosX;
 int spritePosY;
 
+int displayWidth = 122;
+int displayHeight = 250;
+
 
 
 ParseState state = WAIT_STX;
@@ -117,8 +121,17 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventTyp
   //Handle WebSocket event
 }
 
+//----------------------------------------------------------------------------------------------------
+struct WordLengthPair{
+  String word;
+  int length;
+};
+
 
 //----------------------------------------------------------------------------------------------------
+
+
+
 //Epaper Setup and Update Functions
 
 void ePaperSetup(){
@@ -141,12 +154,57 @@ spritePosY = (display.height() - spriteHeight) / 2;
   display.hibernate();
 }
 
+
+vector<String> words;
+vector<int> wordLengths;
+vector<WordLengthPair> textFormatting(String text){
+   
+    // Create a stringstream object
+    stringstream ss(text.c_str());
+    
+    // Variable to hold each word
+    string word;
+    
+    // Vector to store the words
+    vector<string> words;
+    
+    // Extract words from the sentence
+    while (ss >> word) {
+      
+        // Add the word to the vector
+        words.push_back(word);
+    }
+
+    uint16_t w, h;
+    int16_t x1, y1;
+
+    for (int i = 0; i < words.size(); i++){
+      display.getTextBounds(words[i].c_str(), 0, 0, &x1, &y1, &w, &h);  // now filled in
+      int pos = (display.width() - w) / 2;
+      wordLengths.push_back(w);
+    }
+
+    vector <WordLengthPair> wordLengthPairs;
+    for (int i = 0; i < words.size(); i++) {
+      WordLengthPair pair;
+      pair.word = words[i].c_str();
+      pair.length = wordLengths[i];
+      wordLengthPairs.push_back(pair);
+    }
+
+    return wordLengthPairs;
+
+    
+}
+
 void updateDisplay(String text, String color) {
   
   const char* printValue = text.c_str();
   display.init(115200, false); // false = don't re-run full reset, just wake it
   display.setFullWindow();
   display.firstPage();
+  vector<WordLengthPair> wordLengthPairs = textFormatting(text);
+
   do {
     if (color.equals("black")){
       display.fillScreen(GxEPD_BLACK);
@@ -154,9 +212,11 @@ void updateDisplay(String text, String color) {
     }if (color.equals("red")){
       display.fillScreen(GxEPD_RED);
     }
-    display.setTextColor(GxEPD_WHITE);
-    display.setCursor(10, 30);
-    display.print(text);
+    for (int i = 0; i < wordLengthPairs.size(); i++){
+      display.setTextColor(GxEPD_WHITE);
+      display.setCursor(wordLengthPairs[i].length, 30 + (i * 20));
+      display.print(wordLengthPairs[i].word);
+    }
     display.drawBitmap(spritePosX, spritePosY, epd_bitmap_telaeris_sprite, spriteWidth, spriteHeight, GxEPD_WHITE);
   } while (display.nextPage());
 
@@ -310,7 +370,6 @@ void isAllowed(String cardID) {
 vector<uint8_t> buffer;
 String IDString = "";
 void handleBytes(){
-  Serial.print("test");
   while (Serial2.available()) {
     uint8_t b = Serial2.read();
     Serial.print(b, HEX);
@@ -345,6 +404,9 @@ void handleBytes(){
     }
   }
 }
+
+
+//-----------------------------------------------------------------------------------
 
 
 
