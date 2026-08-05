@@ -157,6 +157,7 @@ spritePosY = (display.height() - spriteHeight) / 2;
 
 vector<String> words;
 vector<int> wordLengths;
+int pos;
 vector<WordLengthPair> textFormatting(String text){
    
     // Create a stringstream object
@@ -170,7 +171,10 @@ vector<WordLengthPair> textFormatting(String text){
     
     // Extract words from the sentence
     while (ss >> word) {
-      
+
+      for (int i = 0; i < word.length(); i++) {
+        Serial.println(word[i]);
+      }
         // Add the word to the vector
         words.push_back(word);
     }
@@ -180,8 +184,10 @@ vector<WordLengthPair> textFormatting(String text){
 
     for (int i = 0; i < words.size(); i++){
       display.getTextBounds(words[i].c_str(), 0, 0, &x1, &y1, &w, &h);  // now filled in
-      int pos = (display.width() - w) / 2;
-      wordLengths.push_back(w);
+      pos = (display.width() - w) / 2;
+      wordLengths.push_back(pos);
+      Serial.println(w);
+      Serial.println(pos);
     }
 
     vector <WordLengthPair> wordLengthPairs;
@@ -216,6 +222,7 @@ void updateDisplay(String text, String color) {
       display.setTextColor(GxEPD_WHITE);
       display.setCursor(wordLengthPairs[i].length, 30 + (i * 20));
       display.print(wordLengthPairs[i].word);
+      
     }
     display.drawBitmap(spritePosX, spritePosY, epd_bitmap_telaeris_sprite, spriteWidth, spriteHeight, GxEPD_WHITE);
   } while (display.nextPage());
