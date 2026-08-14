@@ -12,6 +12,16 @@ with access control databases without physical connection to an external device.
 Simply clone this repo and open the project with PlatformIO in FL Studio. The
 project should work in Arduino IDE as well
 
+## Dependencies
+
+-[GxEPD2](https://github.com/ZinggJM/GxEPD2)
+
+-[SQLite](https://github.com/sqlite/sqlite)
+
+-[WiFiManager](https://github.com/tzapu/WiFiManager)
+
+-[ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
+
 ## Usage
 
 The current state of the code has four Primary Functions:
