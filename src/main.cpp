@@ -38,7 +38,7 @@ enum ParseState {
   READ_ETX
 };
 
-// 'pixil-frame-0(1)', 50x50px
+// 50x50 pixel, Telaeris logo
 const unsigned char epd_bitmap_telaeris_sprite [] PROGMEM = {
 	0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x03, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x9c, 
@@ -155,6 +155,7 @@ spritePosY = (display.height() - spriteHeight) / 2;
 }
 
 
+//Function formats text before updating the display
 vector<String> words;
 vector<int> wordLengths;
 int pos;
@@ -245,7 +246,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 
 
 
-
+//Not a necessary function. Printst he IP address to the Epaper Display. Used for debugging
 void IPhandling(){
   if (WiFi.localIP().toString() != currentIP) {
     //updateDisplay("IP Address: ".toString());
@@ -258,8 +259,10 @@ void IPhandling(){
 //----------------------------------------------------------------------------------------------------
 //SQLite3 Callback Functions
 
+//Callback functions are executed whenever sqlite3_exec() is called. They need to be defined if you want access to a queries results.
 
 
+//Default callback function  prints out the contents of the database to the serial monitor. Used for debugging
 int myCallback(void *data, int argc, char **argv, char **colNames) {
   for (int i = 0; i < argc; i++) {
     #if DEBUG
@@ -269,6 +272,8 @@ int myCallback(void *data, int argc, char **argv, char **colNames) {
   return 0;
 }
 
+
+//Used to count how the rows in the database. Vesitgial function, may be useful in the future. Currently unused.
 int rowCountCallback(void *data, int argc, char **argv, char **colNames) {
   int *count = (int*)data;
   *count = atoi(argv[0]);
@@ -277,11 +282,10 @@ int rowCountCallback(void *data, int argc, char **argv, char **colNames) {
 
 char *errMsg = 0;
 
+
+
 vector<vector<String>> dbArr;
-
 int dbToArrHelper(void *data, int argc, char **argv, char **colNames){
-  
-
   vector<String> row;
   for (int i = 0; i < argc; i++) {
     row.push_back(argv[i] ? argv[i] : "NULL");
@@ -290,14 +294,14 @@ int dbToArrHelper(void *data, int argc, char **argv, char **colNames){
   return 0;
 }
 
+//Converts the database into a 2D array of strings. Used for debugging, currently unused.
 void dbToArr(){
   dbArr.clear();
   rc = sqlite3_exec(db, "SELECT * FROM persons;", dbToArrHelper, NULL, &errMsg);
 }
 
-
+//Requires use of the dbToArr() function. Used for debugging 
 void printDb() {
-  
   for (int i = 0; i < dbArr.size(); i++) {
     for (int j = 0; j < dbArr[i].size(); j++) {
       #if DEBUG
@@ -315,6 +319,8 @@ void printDb() {
   }
 }
 
+
+//Called by the isAllowed() function.
 String isAllowedArr[2] = {"Not Found", "Not Found"};
 int isAllowedCallback(void *data, int argc, char **argv, char **colNames) {
   
@@ -336,7 +342,7 @@ int isAllowedCallback(void *data, int argc, char **argv, char **colNames) {
 
 //----------------------------------------------------------------------------------------------------
 
-
+//Used for debugging
 void printFrame() {
   Serial.print("TagType=");
   Serial.print(tagType);
@@ -352,6 +358,7 @@ void printFrame() {
 
 //----------------------------------------------------------------------------------------------------
 
+//Very simple implementation of an access control function. Used for prototyping. Will be needed to be developed further in the future.
 void isAllowed(String cardID) {
   rc = sqlite3_exec(db, ("SELECT * FROM persons WHERE cardID = '" + cardID + "';").c_str(), isAllowedCallback, isAllowedArr, &errMsg);
 
@@ -374,6 +381,10 @@ void isAllowed(String cardID) {
   
 }
 
+
+//Deals with the communication between the ESP32 and TWN4. This function was primarily written by Claude for prototyping purposes, and so has some issues. Overall works quite well though.
+//Things that need to be dealt with:
+//The first cardID sent always starts with an unknown character. After that first ID, other IDs can be read perfectly fine. This may be an issue on the TWN4's end.
 vector<uint8_t> buffer;
 String IDString = "";
 void handleBytes(){
@@ -462,6 +473,8 @@ void setup() {
   #endif
 
 
+
+  //Table is currently dropped and recreated at the start of every boot for debugging purposes. Delete this line, and database will perist across boots and flashes.
   sqlite3_exec(db, "DROP TABLE IF EXISTS persons;", NULL, NULL, &errMsg);
 
   //sqlite3_exec(db, "DELETE FROM my_table;", NULL, NULL, &errMsg);
