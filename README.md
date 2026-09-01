@@ -51,3 +51,23 @@ The code still needs a good amount of further development. Primarily:
 1. Getting the ESP32 to connect with an access control database.
 2. Making the HTML for the captive webpage more presentable.
 3. Cleaning up communication protocol between the ESP32 and TWN4.
+
+
+
+## PIN WIRINGS
+
+ePaper Module:
+VCC -> 3V3
+gnd -> GND
+DIN -> 11
+CLK -> 12
+CS -> 10
+DC -> 9
+RST -> 8
+BUSY -> 7
+
+TWN4:
+TX -> 4
+RX -> 5
+Power -> 5V
+GND -> GND
