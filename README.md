@@ -9,7 +9,7 @@ with access control databases without physical connection to an external device.
 
 ## Installation
 
-Simply clone this repo and open the project with PlatformIO in FL Studio. The
+Simply clone this repo and open the project with PlatformIO in Visual Studio Code. The
 project should work in Arduino IDE as well
 
 ## Dependencies
@@ -57,17 +57,29 @@ The code still needs a good amount of further development. Primarily:
 ## PIN WIRINGS
 
 ePaper Module:
+
 VCC -> 3V3
+
 gnd -> GND
+
 DIN -> 11
+
 CLK -> 12
+
 CS -> 10
+
 DC -> 9
+
 RST -> 8
+
 BUSY -> 7
 
 TWN4:
+
 TX -> 4
+
 RX -> 5
+
 Power -> 5V
+
 GND -> GND
